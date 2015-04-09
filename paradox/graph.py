@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 class State (object):
     UNKNOWN  = 0
     EMPTY    = 1
@@ -6,16 +8,13 @@ class State (object):
     MAX      = 4
 
 
-class Node (dict):
+class Node (defaultdict):
     def __init__(self, ident):
-        super(Node, self).__init__()
+        super(Node, self).__init__(lambda: State.UNKNOWN)
         self.__dict__['ident'] = ident
 
     def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            return State.UNKNOWN
+        return self[name]
 
     def __setattr__(self, name, value):
         if name == 'ident':
@@ -63,7 +62,32 @@ class TemporalGraph (object):
             ident = (ident, time)
         return map((lambda i: self._nodes[i]), self._edges[ident])
 
-    def is_consistent(self, obj):
-        pass
+    def is_consistent(self, item):
+        targets = set(ident for ident, node in self._nodes.iteritems() \
+                if node[item] == State.OCCUPIED)
+        return self._check_consistency(item, [self.current], targets)
 
     ### PRIVATE ###
+
+    def _check_consistency(self, item, path, targets):
+        """Recursive depth-first search of graph.
+
+        Return True if there exists a path through the graph from the current
+        node to all target nodes; return False otherwise.
+        """
+        for neighbor in self._edges[path[-1]]:
+            if neighbor in path:
+                continue
+            elif self._nodes[neighbor][item] in (State.EMPTY, State.VISITED):
+                continue
+
+            remaining = set(targets)
+            if neighbor in targets:
+                remaining.remove(neighbor)
+                if len(remaining) == 0:
+                    return True
+
+            if self._check_consistency(item, path + [neighbor], remaining):
+                return True
+
+        return False
