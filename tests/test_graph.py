@@ -1,6 +1,6 @@
 import unittest
-from paradox.graph import State
 from paradox.graph import TemporalGraph as Graph
+from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
 
 class TestGraph (unittest.TestCase):
     def setUp(self):
@@ -34,16 +34,16 @@ class TestGraph (unittest.TestCase):
 
     def test_consistent(self):
         self.graph.set_current_node('a', 0)
-        self.graph.node('a', 0).agent = State.VISITED
-        self.graph.node('c', 2).agent = State.EMPTY
-        self.graph.node('b', 2).agent = State.OCCUPIED
-        self.graph.node('c', 0).agent = State.OCCUPIED
+        self.graph.node('a', 0).agent = VISITED
+        self.graph.node('c', 2).agent = EMPTY
+        self.graph.node('b', 2).agent = OCCUPIED
+        self.graph.node('c', 0).agent = OCCUPIED
         self.assertEqual(True, self.graph.is_consistent('agent'))
 
     def test_inconsistent(self):
         self.graph.set_current_node('a', 0)
-        self.graph.node('a', 0).agent = State.VISITED
-        self.graph.node('b', 0).agent = State.EMPTY
-        self.graph.node('b', 1).agent = State.VISITED
-        self.graph.node('c', 0).agent = State.OCCUPIED
+        self.graph.node('a', 0).agent = VISITED
+        self.graph.node('b', 0).agent = EMPTY
+        self.graph.node('b', 1).agent = VISITED
+        self.graph.node('c', 0).agent = OCCUPIED
         self.assertEqual(False, self.graph.is_consistent('agent'))

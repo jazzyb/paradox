@@ -1,16 +1,9 @@
 from collections import defaultdict
-
-class State (object):
-    UNKNOWN  = 0
-    EMPTY    = 1
-    OCCUPIED = 2
-    VISITED  = 3
-    MAX      = 4
-
+from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
 
 class Node (defaultdict):
     def __init__(self, ident):
-        super(Node, self).__init__(lambda: State.UNKNOWN)
+        super(Node, self).__init__(lambda: UNKNOWN)
         self.__dict__['ident'] = ident
 
     def __getattr__(self, name):
@@ -19,8 +12,8 @@ class Node (defaultdict):
     def __setattr__(self, name, value):
         if name == 'ident':
             raise KeyError('cannot reassign ident')
-        if value not in range(State.MAX):
-            raise ValueError('value must be a State')
+        if value not in range(NUM_STATES):
+            raise ValueError('value must be a paradox state')
         self[name] = value
 
 
@@ -64,7 +57,7 @@ class TemporalGraph (object):
 
     def is_consistent(self, item):
         targets = set(ident for ident, node in self._nodes.iteritems() \
-                if node[item] == State.OCCUPIED)
+                if node[item] == OCCUPIED)
         return self._check_consistency(item, [self.current], targets)
 
     ### PRIVATE ###
@@ -78,7 +71,7 @@ class TemporalGraph (object):
         for neighbor in self._edges[path[-1]]:
             if neighbor in path:
                 continue
-            elif self._nodes[neighbor][item] in (State.EMPTY, State.VISITED):
+            elif self._nodes[neighbor][item] in (EMPTY, VISITED):
                 continue
 
             remaining = set(targets)
