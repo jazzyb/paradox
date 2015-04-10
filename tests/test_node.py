@@ -22,3 +22,14 @@ class TestNode (unittest.TestCase):
         node = Node('foobar')
         with self.assertRaises(ValueError):
             node.foo = 'BAD'
+
+    def test_copy(self):
+        node = Node('foobar')
+        node.foo = 1
+        node.bar = 2
+        node.baz = 3
+        copy = node.copy()
+        self.assertEqual(Node, type(copy))
+        copy.baz = 2
+        self.assertEqual(3, node.baz)
+        self.assertEqual(2, copy.baz)

@@ -1,6 +1,7 @@
 import unittest
 from paradox.graph import TemporalGraph as Graph
 from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
+from paradox.transaction import TransactionError, TransactionRollback
 
 class TestGraph (unittest.TestCase):
     def setUp(self):
@@ -47,3 +48,31 @@ class TestGraph (unittest.TestCase):
         self.graph.node('b', 1).agent = VISITED
         self.graph.node('c', 0).agent = OCCUPIED
         self.assertEqual(False, self.graph.is_consistent('agent'))
+
+    def test_transaction(self):
+        self.graph.node('a', 0).flag = OCCUPIED
+        with self.graph.transaction() as trans:
+            trans.node('a', 0).flag = VISITED
+        self.assertEqual(VISITED, self.graph.node('a', 0).flag)
+
+    def test_rollback_transaction(self):
+        self.graph.node('a', 0).flag = OCCUPIED
+        with self.graph.transaction() as trans:
+            trans.node('a', 0).flag = VISITED
+            trans.rollback()
+            self.assertEqual(True, False)   # should never reach this line
+        self.assertEqual(OCCUPIED, self.graph.node('a', 0).flag)
+
+    def test_rollback_error(self):
+        with self.assertRaises(TransactionRollback):
+            self.graph.rollback()
+
+    def test_nested_transaction_error(self):
+        with self.assertRaises(TransactionError):
+            with self.graph.transaction() as trans:
+                with trans.transaction() as trans:
+                    pass
+
+    def test_duplicate_node_ids(self):
+        with self.assertRaises(ValueError):
+            self.graph.create_node('a')
