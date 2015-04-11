@@ -1,12 +1,21 @@
 class TransactionRollback (Exception):
+    """Raised by TemporalGraph.rollback() to cancel a transaction."""
     pass
 
 
 class TransactionError (Exception):
+    """Raised to indicate an invalid transaction action."""
     pass
 
 
 class Transaction (object):
+    """Context manager for TemporalGraph transactions.
+
+    Wraps the calls:
+        TemporalGraph.start_transaction()
+        TemporalGraph.cancel_transaction()
+        TemporalGraph.commit_transaction()
+    """
     def __init__(self, graph):
         self.graph = graph
 

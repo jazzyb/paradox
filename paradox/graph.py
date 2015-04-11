@@ -1,11 +1,11 @@
+import collections
 import functools
-from collections import defaultdict
-from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
+from paradox.state import States, UNKNOWN, EMPTY, OCCUPIED, VISITED
 from paradox.transaction import Transaction, TransactionError, \
         TransactionRollback
 
 
-class Node (defaultdict):
+class Node (collections.defaultdict):
     def __init__(self, ident):
         super(Node, self).__init__(lambda: UNKNOWN)
         self.__dict__['ident'] = ident
@@ -16,17 +16,25 @@ class Node (defaultdict):
     def __setattr__(self, name, value):
         if name == 'ident':
             raise KeyError('cannot reassign ident')
-        if value not in range(NUM_STATES):
+        if value not in States:
             raise ValueError('value must be a paradox state')
         self[name] = value
 
     def copy(self):
+        """Return a deepcopy of this node."""
         copy = Node(self.ident)
-        copy.__dict__.update(self.__dict__)
+        for k, v in self.iteritems():
+            copy[k] = v
         return copy
 
 
 def transaction_method(func):
+    """Function decorator to force TemporalGraph methods to obey transaction
+    functionality.
+
+    Wraps a TemporalGraph method.  If the graph has started a transaction,
+    then call the method of the transaction instead of the graph.
+    """
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         if self._transaction:
@@ -38,6 +46,9 @@ def transaction_method(func):
 
 class TemporalGraph (object):
     def __init__(self, start_time, end_time):
+        """Initialize an empty TemporalGraph that operates between
+        'start_time' and 'end_time' inclusive.
+        """
         self._start = start_time
         self._end = end_time
         self._nodes = dict()
@@ -46,12 +57,15 @@ class TemporalGraph (object):
         self.current = None
         self._transaction = None
 
-    # @transaction_method # ???
+    #@transaction_method # ???
     def copy(self):
+        """Return a deepcopy of this graph."""
         copy = TemporalGraph(self._start, self._end)
         copy._nodes = {k: v.copy() for k,v in self._nodes.iteritems()}
         copy._edges = {k: set(v) for k,v in self._edges.iteritems()}
         copy._names = set(self._names)
+        copy.current = self.current
+        #copy._transaction = self._transaction # ???
         return copy
 
     @transaction_method
@@ -64,6 +78,14 @@ class TemporalGraph (object):
 
     @transaction_method
     def create_node(self, name):
+        """Add a new set of nodes to the graph.
+
+        The node 'name' represents the "spacial" identifier for the node.
+        From this a set of "temporal" nodes are created -- one for each "tick"
+        between the start and end of the graph time-period.  Each of these
+        nodes is given the identifier of '(name, tick)'.  Each node by default
+        has as its neighbors the next node and all prior nodes in time.
+        """
         if name in self._names:
             raise ValueError('node identifier already exists')
 
@@ -79,23 +101,30 @@ class TemporalGraph (object):
 
     @transaction_method
     def direct_edge(self, node_name1, node_name2):
+        """Create an edge between sets of temporal nodes.
+
+        'node_name1' and 'node_name2' are spacial node identifiers.
+        """
         for t in range(self._start, self._end):
             self._edges[(node_name1, t)].add((node_name2, t + 1))
 
     @transaction_method
     def node(self, ident, time=None):
+        """Return the node for the given identifier."""
         if time is not None:
             ident = (ident, time)
         return self._nodes[ident]
 
     @transaction_method
     def neighbors(self, ident, time=None):
+        """Return all temporal neighbors of the node."""
         if time is not None:
             ident = (ident, time)
         return map((lambda i: self._nodes[i]), self._edges[ident])
 
     @transaction_method
     def is_consistent(self, item):
+        """Return False if there is a temporal paradox in the graph."""
         targets = set(ident for ident, node in self._nodes.iteritems() \
                 if node[item] == OCCUPIED)
         return self._check_consistency(item, [self.current], targets)
@@ -117,11 +146,11 @@ class TemporalGraph (object):
         self._transaction = None
 
     def transaction(self):
-        if self._transaction:
-            raise TransactionError('cannot execute nested transactions')
+        """Return a transaction context manager."""
         return Transaction(self)
 
     def rollback(self):
+        """Cancel a transaction within a with-statement."""
         raise TransactionRollback('rollback called outside of transaction')
 
     ### PRIVATE ###

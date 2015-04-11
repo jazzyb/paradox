@@ -1,6 +1,6 @@
 import unittest
 from paradox.graph import TemporalGraph as Graph
-from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
+from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED
 from paradox.transaction import TransactionError, TransactionRollback
 
 class TestGraph (unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 from paradox.graph import Node
-from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED, NUM_STATES
+from paradox.state import UNKNOWN, EMPTY, OCCUPIED, VISITED
 
 class TestNode (unittest.TestCase):
     def test_subclass(self):
@@ -33,3 +33,5 @@ class TestNode (unittest.TestCase):
         copy.baz = 2
         self.assertEqual(3, node.baz)
         self.assertEqual(2, copy.baz)
+        self.assertEqual(2, copy.bar)
+        self.assertEqual(1, copy.foo)
