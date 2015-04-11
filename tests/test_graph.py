@@ -1,7 +1,6 @@
 import unittest
 from paradox.graph import TemporalGraph as Graph
-from paradox.graph import UNKNOWN, EMPTY, OCCUPIED, VISITED
-from paradox.graph import TransactionError, TransactionRollback
+from paradox.graph import TransactionRollback, UNKNOWN, EMPTY, OCCUPIED, VISITED
 
 class TestGraph (unittest.TestCase):
     def setUp(self):
@@ -11,6 +10,10 @@ class TestGraph (unittest.TestCase):
         self.graph.create_node('c')
         self.graph.direct_edge('a', 'b')
         self.graph.direct_edge('b', 'c')
+
+    def test_duplicate_node_ids(self):
+        with self.assertRaises(ValueError):
+            self.graph.create_node('a')
 
     def test_neighbors(self):
         self.assertEqual(len(self.graph._nodes), 9)
@@ -51,28 +54,18 @@ class TestGraph (unittest.TestCase):
 
     def test_transaction(self):
         self.graph.node('a', 0).flag = OCCUPIED
-        with self.graph.transaction() as trans:
-            trans.node('a', 0).flag = VISITED
+        with self.graph.transaction() as graph:
+            graph.node('a', 0).flag = VISITED
         self.assertEqual(VISITED, self.graph.node('a', 0).flag)
 
     def test_rollback_transaction(self):
         self.graph.node('a', 0).flag = OCCUPIED
-        with self.graph.transaction() as trans:
-            trans.node('a', 0).flag = VISITED
-            trans.rollback()
+        with self.graph.transaction() as graph:
+            graph.node('a', 0).flag = VISITED
+            graph.rollback()
             self.assertEqual(True, False)   # should never reach this line
         self.assertEqual(OCCUPIED, self.graph.node('a', 0).flag)
 
     def test_rollback_error(self):
         with self.assertRaises(TransactionRollback):
             self.graph.rollback()
-
-    def test_nested_transaction_error(self):
-        with self.assertRaises(TransactionError):
-            with self.graph.transaction() as trans:
-                with trans.transaction() as trans:
-                    pass
-
-    def test_duplicate_node_ids(self):
-        with self.assertRaises(ValueError):
-            self.graph.create_node('a')
