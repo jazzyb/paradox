@@ -1,8 +1,13 @@
 import collections
 import functools
-from paradox.state import States, UNKNOWN, EMPTY, OCCUPIED, VISITED
-from paradox.transaction import Transaction, TransactionError, \
-        TransactionRollback
+
+
+# Possible states that variables in TemporalGraph nodes may hold:
+UNKNOWN  = 0
+EMPTY    = 1
+OCCUPIED = 2
+VISITED  = 3
+States = (UNKNOWN, EMPTY, OCCUPIED, VISITED)
 
 
 class Node (collections.defaultdict):
@@ -26,6 +31,16 @@ class Node (collections.defaultdict):
         for k, v in self.iteritems():
             copy[k] = v
         return copy
+
+
+class TransactionRollback (Exception):
+    """Raised by TemporalGraph.rollback() to cancel a transaction."""
+    pass
+
+
+class TransactionError (Exception):
+    """Raised to indicate an invalid transaction action."""
+    pass
 
 
 def transaction_method(func):
@@ -129,7 +144,7 @@ class TemporalGraph (object):
                 if node[item] == OCCUPIED)
         return self._check_consistency(item, [self.current], targets)
 
-    ### Transaction methods:
+    ### TRANSACTION METHODS ###
 
     def start_transaction(self):
         if self._transaction:
@@ -147,7 +162,29 @@ class TemporalGraph (object):
 
     def transaction(self):
         """Return a transaction context manager."""
-        return Transaction(self)
+
+        class _Transaction (object):
+            """Context manager for TemporalGraph transactions.
+
+            Wraps the calls:
+                start_transaction()
+                cancel_transaction()
+                commit_transaction()
+            """
+            def __init__(self, graph):
+                self.graph = graph
+
+            def __enter__(self):
+                self.graph.start_transaction()
+                return self.graph
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                if exc_type == TransactionRollback:
+                    self.graph.cancel_transaction()
+                    return True
+                self.graph.commit_transaction()
+
+        return _Transaction(self)
 
     def rollback(self):
         """Cancel a transaction within a with-statement."""
