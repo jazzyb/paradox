@@ -1,5 +1,5 @@
 import unittest
-from paradox.graph import Node, UNKNOWN, EMPTY, OCCUPIED, VISITED
+from paradox import Node, UNKNOWN, EMPTY, OCCUPIED, VISITED
 
 class TestNode (unittest.TestCase):
     def test_subclass(self):
